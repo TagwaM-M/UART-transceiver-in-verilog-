@@ -75,32 +75,40 @@ parameter CLK_PER_BIT = 10417;
         repeat (5) @(negedge clk);
             rst_n = 1'b1;
     end 
+    /// sending multiple bytes task
+    task send_and_check(input [7:0] value);
+    begin
+        wait(tx_active == 1'b0);
+        @(negedge clk);
+
+        tx_data  = value;
+        tx_start = 1'b1;
+
+        @(negedge clk);
+        tx_start = 1'b0;
+
+        @(posedge rx_done);
+
+        if (rx_data == value)
+            $display("PASS: sent %h, received %h", value, rx_data);
+        else
+            $display("FAIL: sent %h, received %h", value, rx_data);
+    end
+    endtask
     
     // transmission stimulus
     
     initial begin
         wait(rst_n == 1'b1);
-        
         repeat (5) @(negedge clk);
-        
-        tx_data = 8'h41;
-        tx_start = 1'b1;
-        @(negedge clk);
-        tx_start = 1'b0;
-    end
-    
-    // ckecking reciever 
-    
-    initial begin 
-        @(posedge rx_done);
-        
-        if(rx_data == 8'h41) 
-            $display("pass: receieved %h", rx_data);
-        
-        else
-            $display("Failed: receieved %h", rx_data);
+
+        send_and_check(8'h00);
+        send_and_check(8'hFF);
+        send_and_check(8'hA5);
+        send_and_check(8'h41);
+        send_and_check(8'h7E);
+
         #1000;
         $finish;
-    
     end
 endmodule
